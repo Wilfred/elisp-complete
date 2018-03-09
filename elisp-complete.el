@@ -134,16 +134,19 @@
      elisp-complete--recent-syms
      (-take elisp-complete--history-size syms))))
 
-;; TODO: these break emacs in interesting ways, preventing edebug from
-;; working. Should they return something?
+(defun elisp-complete--add-enclosing-to-recent (&rest ignored)
+  "Add the symbols in the enclosing top-level form to `elisp-complete--recent-syms'"
+  (let ((form (edebug-read-top-level-form)))
+    (elisp-complete--add-to-recent form)))
 
-;; (defadvice edebug-eval-defun (after elisp-complete--record-form activate)
-;;   (let ((form (edebug-read-top-level-form)))
-;;     (elisp-complete--add-to-recent form)))
+(defun elisp-complete--add-preceding-to-recent (&rest ignored)
+  "Add the symbols in the preceding form to `elisp-complete--recent-syms'"
+  (let ((form (edebug-read-top-level-form)))
+    (elisp-complete--add-to-recent form)))
 
-;; (defadvice eval-last-sexp (after elisp-complete--record-last-form activate)
-;;   (let ((form (elisp--preceding-sexp)))
-;;     (elisp-complete--add-to-recent form)))
+(advice-add #'edebug-eval-defun :after #'elisp-complete--add-enclosing-to-recent)
+
+(advice-add #'eval-last-sexp :after #'elisp-complete--add-preceding-to-recent)
 
 (defun elisp-complete--locals-at-point ()
   (catch 'done
