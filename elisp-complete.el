@@ -180,6 +180,13 @@
      matching-locals
      matching-names)))
 
+(defun elisp-complete (command &optional arg &rest ignored)
+  (interactive (list 'interactive))
+  (pcase command
+    (`interactive (company-begin-backend 'elisp-complete))
+    (`prefix (company-grab-symbol))
+    (`candidates (elisp-complete--candidates arg))
+    (`meta (format "This value is named %s" arg))))
 
 (provide 'elisp-complete)
 ;;; elisp-complete.el ends here
