@@ -144,7 +144,7 @@
   (let ((form (edebug-read-top-level-form)))
     (elisp-complete--add-to-recent form)))
 
-(advice-add #'edebug-eval-defun :after #'elisp-complete--add-enclosing-to-recent)
+;; (advice-add #'edebug-eval-defun :after #'elisp-complete--add-enclosing-to-recent)
 
 ;; ;; Doesn't work when called with a prefix, frustratingly.
 ;; (advice-remove #'edebug-eval-defun #'elisp-complete--add-enclosing-to-recent)
