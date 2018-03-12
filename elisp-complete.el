@@ -170,8 +170,6 @@
   (let* ((sym-names (-map #'symbol-name elisp-complete--recent-syms))
          (matching-names
           (--filter (s-starts-with-p prefix it) sym-names))
-         ;; TODO: elisp-complete--locals-at-point isn't offering these
-         ;; let-bound vars for some reason.
          (local-names
           (-map #'symbol-name (elisp-complete--locals-at-point)))
          (matching-locals
