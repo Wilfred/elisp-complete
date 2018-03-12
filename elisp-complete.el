@@ -35,8 +35,6 @@
 ;; Could complete group value, simple type values, and keys to
 ;; defcustom.
 
-;; Completing functions and variables based on context.
-;;
 ;; Auto insert space when completing (foo ) if foo takes multiple
 ;; args.
 ;;
@@ -64,8 +62,6 @@
 ;; commands.
 ;;
 ;; Autocomplete keywords inside rx.
-;;
-;; Complete () to a function call, unless we're in quotes.
 ;;
 ;; Show num args (dropdown) and docstring (minibuffer) when completing.
 ;;
@@ -166,17 +162,40 @@
       ;; TODO: this includes generated symbols produced by dash macro expansion.
       (elisp-def--bound-syms expanded-form placeholder))))
 
-(defun elisp-complete--candidates (prefix)
-  (let* ((sym-names (-map #'symbol-name elisp-complete--recent-syms))
+(defun elisp-complete--callables (prefix)
+  (let* ((fn-syms (-filter #'fboundp elisp-complete--recent-syms))
+         (sym-names (-map #'symbol-name fn-syms))
+         (matching-names
+          (--filter (s-starts-with-p prefix it) sym-names)))
+    matching-names))
+
+(defun elisp-complete--vars (prefix)
+  (let* ((fn-syms (-filter #'boundp elisp-complete--recent-syms))
+         (sym-names (-map #'symbol-name fn-syms))
          (matching-names
           (--filter (s-starts-with-p prefix it) sym-names))
          (local-names
           (-map #'symbol-name (elisp-complete--locals-at-point)))
          (matching-locals
           (--filter (s-starts-with-p prefix it) local-names)))
-    (append
-     matching-locals
-     matching-names)))
+    (append matching-locals matching-names)))
+
+(defun elisp-complete--candidates (prefix)
+  ;; TODO: this isn't a great fit, because
+  ;; `elisp-def--namespace-at-point' distinguishes bound vars from
+  ;; global vars. We don't care here and it's needless work.
+  (let ((namespace (elisp-def--namespace-at-point)))
+    (cond
+     ((eq namespace 'function)
+      (elisp-complete--callables prefix))
+     ((memq namespace '(variable bound))
+      (elisp-complete--vars prefix))
+     (t
+      (append
+       ;; Put vars first, as that ensures we have locals and params
+       ;; earlier.
+       (elisp-complete--vars prefix)
+       (elisp-complete--callables prefix))))))
 
 (defun elisp-complete (command &optional arg &rest ignored)
   (interactive (list 'interactive))
