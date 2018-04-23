@@ -130,22 +130,25 @@
      elisp-complete--recent-syms
      (-take elisp-complete--history-size syms))))
 
+(defun elisp-complete--read-top-level ()
+  "Read the top-level form enclosing point."
+  ;; We can't use `edebug-read-top-level-form' as it mutates some
+  ;; edebug state and `C-u M-x edebug-eval-defun' stops working.
+  (save-excursion
+    (beginning-of-defun)
+    (read (current-buffer))))
+
 (defun elisp-complete--add-enclosing-to-recent (&rest ignored)
   "Add the symbols in the enclosing top-level form to `elisp-complete--recent-syms'"
-  (let ((form (edebug-read-top-level-form)))
-    (elisp-complete--add-to-recent form)))
+  (elisp-complete--add-to-recent (elisp-complete--read-top-level)))
 
 (defun elisp-complete--add-preceding-to-recent (&rest ignored)
   "Add the symbols in the preceding form to `elisp-complete--recent-syms'"
-  (let ((form (edebug-read-top-level-form)))
-    (elisp-complete--add-to-recent form)))
+  (elisp-complete--add-to-recent (elisp-complete--read-top-level)))
 
-;; (advice-add #'edebug-eval-defun :after #'elisp-complete--add-enclosing-to-recent)
+(advice-add #'edebug-eval-defun :after #'elisp-complete--add-enclosing-to-recent)
 
-;; ;; Doesn't work when called with a prefix, frustratingly.
-;; (advice-remove #'edebug-eval-defun #'elisp-complete--add-enclosing-to-recent)
-
-;; (advice-add #'eval-last-sexp :after #'elisp-complete--add-preceding-to-recent)
+(advice-add #'eval-last-sexp :after #'elisp-complete--add-preceding-to-recent)
 
 (defun elisp-complete--locals-at-point ()
   (catch 'done
