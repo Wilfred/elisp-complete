@@ -98,6 +98,11 @@
 ;;
 ;; `defadvice' should offer completion for existing functions as the
 ;; first argument.
+;;
+;; Sort results with prefix matches first, then substrings (maybe
+;; treating suffix matches more highly too).
+;;
+;; Fuzzy completion on hyphens, so `foo-bar' matches `foo--bar'.
 
 ;;; Code:
 
