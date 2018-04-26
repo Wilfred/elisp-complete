@@ -269,7 +269,7 @@ have been recently used are ordered first."
           (--filter (not (memq it recent-syms)) bound-syms))
     ;; Sort unused symbols alphabetically.
     (setq unused-syms (sort unused-syms #'string<))
-
+    ;; TODO: annotate strings, clarifying locals.
     (append local-syms recent-syms unused-syms)))
 
 (defun elisp-complete--candidates (prefix)
