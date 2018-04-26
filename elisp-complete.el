@@ -235,6 +235,43 @@ have been recently used are ordered first."
      (--map (elisp-complete--annotate it 'let) matching-locals)
      matching-names)))
 
+(cl-defun elisp-complete-cands (prefix &key (funcs t) (macros t) (vars t))
+  (let* (
+         ;; Symbols that we can see are lexically bound.
+         (local-syms (and vars (elisp-complete--locals-at-point)))
+         (local-syms
+          (--filter (s-starts-with-p prefix (symbol-name it)) local-syms))
+         ;; Recently used, globally bound symbols.
+         (recent-syms
+          (--filter
+           (or
+            (and funcs (functionp it))
+            (and macros (macrop it))
+            (and vars (boundp it)))
+           elisp-complete--recent-syms))
+         (recent-syms
+          (--filter (s-starts-with-p prefix (symbol-name it)) recent-syms))
+
+         bound-syms unused-syms)
+    ;; Find all bound symbols in the namespaces we're looking at.
+    (mapatoms
+     (lambda (sym)
+       (when
+           (or
+            (and funcs (functionp sym))
+            (and macros (macrop sym))
+            (and vars (boundp sym)))
+         (push sym bound-syms))))
+    ;; Filter bound symbols to unused symbols matching the current prefix.
+    (setq bound-syms
+          (--filter (s-starts-with-p prefix (symbol-name it)) bound-syms))
+    (setq unused-syms
+          (--filter (not (memq it recent-syms)) bound-syms))
+    ;; Sort unused symbols alphabetically.
+    (setq unused-syms (sort unused-syms #'string<))
+
+    (append local-syms recent-syms unused-syms)))
+
 (defun elisp-complete--candidates (prefix)
   ;; TODO: this isn't a great fit, because
   ;; `elisp-def--namespace-at-point' distinguishes bound vars from
