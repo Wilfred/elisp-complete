@@ -257,12 +257,12 @@ have been recently used are ordered first."
     (format " %s" description)))
 
 (defun elisp-complete--docstring (sym)
-  (ignore-errors
-    ;; TODO: split first line/sentence of docstring.
-
-    ;; TODO: ignore-errors is crude. I think we just need to check
-    ;; it's bound.
-    (documentation sym)))
+  (when (or (boundp sym) (fboundp sym))
+    (-when-let (docstring (documentation sym))
+      (concat
+       ;; Just show the first sentence.
+       (car (s-split-up-to (rx ".") docstring 1))
+       "."))))
 
 (defun elisp-complete (command &optional arg &rest ignored)
   (interactive (list 'interactive))
