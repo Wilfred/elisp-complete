@@ -170,23 +170,40 @@
       ;; TODO: this includes generated symbols produced by dash macro expansion.
       (elisp-def--bound-syms expanded-form placeholder))))
 
+(defun elisp-complete--annotate (str desc)
+  "Mutate STR to apply DESC as a text property.
+Returns STR."
+  (put-text-property 0 1 'description desc str)
+  str)
+
 (defun elisp-complete--callables (prefix)
   (let* ((fn-syms (-filter #'fboundp elisp-complete--recent-syms))
          (sym-names (-map #'symbol-name fn-syms))
          (matching-names
-          (--filter (s-starts-with-p prefix it) sym-names)))
-    matching-names))
+          (--filter (s-starts-with-p prefix it) sym-names))
+         (annotated-names
+          (--map
+           (elisp-complete--annotate
+            ;; TODO: primitives like if.
+            it
+            (if (functionp (intern it)) 'defun 'defmacro))
+           matching-names)))
+    annotated-names))
 
 (defun elisp-complete--vars (prefix)
   (let* ((fn-syms (-filter #'boundp elisp-complete--recent-syms))
          (sym-names (-map #'symbol-name fn-syms))
+         ;; TODO: this is just showing all matching, recent vars,
+         ;; regardless of whether they're appropriate.
          (matching-names
           (--filter (s-starts-with-p prefix it) sym-names))
          (local-names
           (-map #'symbol-name (elisp-complete--locals-at-point)))
          (matching-locals
           (--filter (s-starts-with-p prefix it) local-names)))
-    (append matching-locals matching-names)))
+    (append
+     (--map (elisp-complete--annotate it 'let) matching-locals)
+     matching-names)))
 
 (defun elisp-complete--candidates (prefix)
   ;; TODO: this isn't a great fit, because
@@ -205,13 +222,26 @@
        (elisp-complete--vars prefix)
        (elisp-complete--callables prefix))))))
 
+(defun elisp-complete--format-annotation (candidate)
+  (-when-let (description (get-text-property 0 'description candidate))
+    (format " %s" description)))
+
+(defun elisp-complete--docstring (sym)
+  (ignore-errors
+    ;; TODO: split first line/sentence of docstring.
+
+    ;; TODO: ignore-errors is crude. I think we just need to check
+    ;; it's bound.
+    (documentation sym)))
+
 (defun elisp-complete (command &optional arg &rest ignored)
   (interactive (list 'interactive))
   (pcase command
     (`interactive (company-begin-backend 'elisp-complete))
     (`prefix (company-grab-symbol))
     (`candidates (elisp-complete--candidates arg))
-    (`meta (format "This value is named %s" arg))))
+    (`meta (elisp-complete--docstring (intern arg)))
+    (`annotation (elisp-complete--format-annotation arg))))
 
 (provide 'elisp-complete)
 ;;; elisp-complete.el ends here
