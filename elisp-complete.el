@@ -160,6 +160,7 @@
   "Add the symbols in the enclosing top-level form to `elisp-complete--recent-syms'"
   (elisp-complete--add-to-recent (elisp-complete--read-top-level)))
 
+;; TODO: actually get preceding form.
 (defun elisp-complete--add-preceding-to-recent (&rest ignored)
   "Add the symbols in the preceding form to `elisp-complete--recent-syms'"
   (elisp-complete--add-to-recent (elisp-complete--read-top-level)))
@@ -229,6 +230,7 @@ have been recently used are ordered first."
           (-map #'symbol-name (elisp-complete--locals-at-point)))
          (matching-locals
           (--filter (s-starts-with-p prefix it) local-names)))
+    ;; TODO: offer global variables too.
     (append
      (--map (elisp-complete--annotate it 'let) matching-locals)
      matching-names)))
