@@ -114,7 +114,7 @@
 (defvar elisp-complete--history-size 1000)
 
 (defun elisp-complete--global-syms (form)
-  "Return all the globally bound symbol references in FORM."
+  "Return all the symbol in FORM that are globally bound."
   ;; TODO: we can't macro expand, because we want to preserve macro
   ;; references. However, this erroneously offers binding variable
   ;; names (probably harmless) and function (due to #'foo, which will
