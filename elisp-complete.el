@@ -293,6 +293,8 @@ have been recently used are ordered first."
   (-when-let (description (get-text-property 0 'description candidate))
     (format " %s" description)))
 
+;; TODO: write tests for this, particularly handling
+;; syntax-ppss-depth.
 (defun elisp-complete--docstring (sym)
   (when (or (boundp sym) (fboundp sym))
     (-when-let (docstring (documentation sym))
