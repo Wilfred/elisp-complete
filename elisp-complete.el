@@ -115,6 +115,17 @@
 (defvar elisp-complete--recent-syms nil)
 (defvar elisp-complete--history-size 1000)
 
+(defun elisp-complete--all-callable-syms (prefix)
+  "Return a list of all bound syms that start with PREFIX."
+  (let (syms)
+    (mapatoms
+     (lambda (sym)
+       (when (and
+              (fboundp sym)
+              (s-prefix-p prefix (symbol-name sym)))
+         (push sym syms))))
+    syms))
+
 (defun elisp-complete--global-syms (form)
   "Return all the symbol in FORM that are globally bound."
   ;; TODO: we can't macro expand, because we want to preserve macro
@@ -179,18 +190,33 @@ Returns STR."
   str)
 
 (defun elisp-complete--callables (prefix)
-  (let* ((fn-syms (-filter #'fboundp elisp-complete--recent-syms))
-         (sym-names (-map #'symbol-name fn-syms))
-         (matching-names
-          (--filter (s-starts-with-p prefix it) sym-names))
-         (annotated-names
-          (--map
-           (elisp-complete--annotate
-            ;; TODO: primitives like if.
-            it
-            (if (functionp (intern it)) 'defun 'defmacro))
-           matching-names)))
-    annotated-names))
+  "Return a list of symbol names of callables starting with PREFIX.
+
+Each symbol is a function, macro or special form. Symbols that
+have been recently used are ordered first."
+  (let* (
+         ;; Recently seen symbols that are functions.
+         (used-fn-syms (--filter
+                        (and (fboundp it)
+                             (s-prefix-p prefix (symbol-name it)))
+                        elisp-complete--recent-syms))
+         ;; Offer other functions that start with this prefix, but
+         ;; only after recently used symbols.
+         (all-fn-syms (elisp-complete--all-callable-syms prefix))
+         (unused-fn-syms
+          (--filter (not (memq it used-fn-syms)) all-fn-syms)))
+    ;; The used fns are already ordered by most recently used first,
+    ;; but we want to sort the remainder alphabetically.
+    (setq unused-fn-syms (sort unused-fn-syms #'string<))
+
+    (--map                              ;
+     (elisp-complete--annotate
+      (copy-sequence (symbol-name it))
+      (cond
+       ((functionp it) 'defun)
+       ((macrop it) 'defmacro)
+       (t 'special-form)))
+     (append used-fn-syms unused-fn-syms))))
 
 (defun elisp-complete--vars (prefix)
   (let* ((fn-syms (-filter #'boundp elisp-complete--recent-syms))
