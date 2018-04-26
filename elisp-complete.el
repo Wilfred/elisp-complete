@@ -103,6 +103,8 @@
 ;; treating suffix matches more highly too).
 ;;
 ;; Fuzzy completion on hyphens, so `foo-bar' matches `foo--bar'.
+;;
+;; Complete #' for functions, and only functions.
 
 ;;; Code:
 
