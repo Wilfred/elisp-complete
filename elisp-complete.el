@@ -185,55 +185,10 @@
       (elisp-def--bound-syms expanded-form placeholder))))
 
 (defun elisp-complete--annotate (str desc)
-  "Mutate STR to apply DESC as a text property.
-Returns STR."
+  "Return a copy of STR with DESC as a text property."
+  (setq str (copy-sequence str))
   (put-text-property 0 1 'description desc str)
   str)
-
-(defun elisp-complete--callables (prefix)
-  "Return a list of symbol names of callables starting with PREFIX.
-
-Each symbol is a function, macro or special form. Symbols that
-have been recently used are ordered first."
-  (let* (
-         ;; Recently seen symbols that are functions.
-         (used-fn-syms (--filter
-                        (and (fboundp it)
-                             (s-prefix-p prefix (symbol-name it)))
-                        elisp-complete--recent-syms))
-         ;; Offer other functions that start with this prefix, but
-         ;; only after recently used symbols.
-         (all-fn-syms (elisp-complete--all-callable-syms prefix))
-         (unused-fn-syms
-          (--filter (not (memq it used-fn-syms)) all-fn-syms)))
-    ;; The used fns are already ordered by most recently used first,
-    ;; but we want to sort the remainder alphabetically.
-    (setq unused-fn-syms (sort unused-fn-syms #'string<))
-
-    (--map                              ;
-     (elisp-complete--annotate
-      (copy-sequence (symbol-name it))
-      (cond
-       ((functionp it) 'defun)
-       ((macrop it) 'defmacro)
-       (t 'special-form)))
-     (append used-fn-syms unused-fn-syms))))
-
-(defun elisp-complete--vars (prefix)
-  (let* ((fn-syms (-filter #'boundp elisp-complete--recent-syms))
-         (sym-names (-map #'symbol-name fn-syms))
-         ;; TODO: this is just showing all matching, recent vars,
-         ;; regardless of whether they're appropriate.
-         (matching-names
-          (--filter (s-starts-with-p prefix it) sym-names))
-         (local-names
-          (-map #'symbol-name (elisp-complete--locals-at-point)))
-         (matching-locals
-          (--filter (s-starts-with-p prefix it) local-names)))
-    ;; TODO: offer global variables too.
-    (append
-     (--map (elisp-complete--annotate it 'let) matching-locals)
-     matching-names)))
 
 (cl-defun elisp-complete-cands (prefix &key (funcs t) (macros t) (vars t))
   (let* (
@@ -252,7 +207,7 @@ have been recently used are ordered first."
          (recent-syms
           (--filter (s-starts-with-p prefix (symbol-name it)) recent-syms))
 
-         bound-syms unused-syms)
+         bound-syms unused-syms global-syms)
     ;; Find all bound symbols in the namespaces we're looking at.
     (mapatoms
      (lambda (sym)
@@ -269,8 +224,31 @@ have been recently used are ordered first."
           (--filter (not (memq it recent-syms)) bound-syms))
     ;; Sort unused symbols alphabetically.
     (setq unused-syms (sort unused-syms #'string<))
-    ;; TODO: annotate strings, clarifying locals.
-    (append local-syms recent-syms unused-syms)))
+    ;; Offer recently used global symbols before other global symbols.
+    (setq global-syms (append recent-syms unused-syms))
+
+    (append
+     (--map
+      ;; TODO: distinguish local variables from parameters.
+      (elisp-complete--annotate (symbol-name it) 'local)
+      local-syms)
+     (--map
+      (elisp-complete--annotate
+       (symbol-name it)
+       (cond
+        ;; If it's both a variable and a function, and we're looking
+        ;; for both, show this in the annotation.
+        ((and (fboundp it) (boundp it) funcs vars)
+         'defvar/defun)
+        ;; Otherwise, annotate with the first namespace found.
+        ((and (macrop it) macros)
+         'defmacro)
+        ;; TODO: it would be nice to distinguish defsubst.
+        ((and (fboundp it) funcs)
+         'defun)
+        ((and (boundp it) vars)
+         'defvar)))
+      global-syms))))
 
 (defun elisp-complete--candidates (prefix)
   ;; TODO: this isn't a great fit, because
@@ -279,15 +257,11 @@ have been recently used are ordered first."
   (let ((namespace (elisp-def--namespace-at-point)))
     (cond
      ((eq namespace 'function)
-      (elisp-complete--callables prefix))
+      (elisp-complete-cands prefix :vars nil))
      ((memq namespace '(variable bound))
-      (elisp-complete--vars prefix))
+      (elisp-complete-cands prefix :funcs nil :macros nil))
      (t
-      (append
-       ;; Put vars first, as that ensures we have locals and params
-       ;; earlier.
-       (elisp-complete--vars prefix)
-       (elisp-complete--callables prefix))))))
+      (elisp-complete-cands prefix)))))
 
 (defun elisp-complete--format-annotation (candidate)
   (-when-let (description (get-text-property 0 'description candidate))
