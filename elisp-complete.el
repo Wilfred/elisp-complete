@@ -122,9 +122,27 @@
      (lambda (sym)
        (when (and
               (fboundp sym)
-              (s-prefix-p prefix (symbol-name sym)))
+              (elisp-complete--matches prefix sym))
          (push sym syms))))
     syms))
+
+(defun elisp-complete--matches (prefix sym)
+  "Does SYM match PREFIX?
+
+SYM may be a symbol or a string. PREFIX may optionally be
+abbreviated, for example w-t-b for with-temp-buffer."
+  (when (symbolp sym)
+    (setq sym (symbol-name sym)))
+  (let ((sym-parts (s-split (rx "-") sym))
+        (prefix-parts (s-split (rx "-") prefix)))
+    (and
+     (<= (length prefix-parts) (length sym-parts))
+     (-all-p
+      (-lambda ((sym-part . prefix-part))
+        (s-starts-with-p prefix-part sym-part))
+      (-zip-pair sym-parts prefix-parts)))))
+
+(elisp-complete--matches "w-t-c" 'with-temp-buffer)
 
 (defun elisp-complete--global-syms (form)
   "Return all the symbol in FORM that are globally bound."
@@ -195,7 +213,7 @@
          ;; Symbols that we can see are lexically bound.
          (local-syms (and vars (elisp-complete--locals-at-point)))
          (local-syms
-          (--filter (s-starts-with-p prefix (symbol-name it)) local-syms))
+          (--filter (elisp-complete--matches prefix it) local-syms))
          ;; Recently used, globally bound symbols.
          (recent-syms
           (--filter
@@ -205,7 +223,7 @@
             (and vars (boundp it)))
            elisp-complete--recent-syms))
          (recent-syms
-          (--filter (s-starts-with-p prefix (symbol-name it)) recent-syms))
+          (--filter (elisp-complete--matches prefix it) recent-syms))
 
          bound-syms unused-syms global-syms)
     ;; Find all bound symbols in the namespaces we're looking at.
@@ -219,7 +237,7 @@
          (push sym bound-syms))))
     ;; Filter bound symbols to unused symbols matching the current prefix.
     (setq bound-syms
-          (--filter (s-starts-with-p prefix (symbol-name it)) bound-syms))
+          (--filter (elisp-complete--matches prefix it) bound-syms))
     (setq unused-syms
           (--filter (not (memq it recent-syms)) bound-syms))
     ;; Sort unused symbols alphabetically.
