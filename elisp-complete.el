@@ -112,6 +112,7 @@
 (require 's)
 (require 'elisp-def)
 
+;; TODO: Push recently accepted completions to the head of this list too.
 (defvar elisp-complete--recent-syms nil)
 (defvar elisp-complete--history-size 1000)
 
