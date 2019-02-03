@@ -111,6 +111,7 @@
 (require 'dash)
 (require 's)
 (require 'elisp-def)
+(require 'f)
 
 ;; TODO: Push recently accepted completions to the head of this list too.
 (defvar elisp-complete--recent-syms nil)
@@ -295,6 +296,30 @@ abbreviated, for example w-t-b for with-temp-buffer."
        ;; Just show the first sentence.
        (car (s-split-up-to (rx ".") docstring 1))
        "."))))
+
+(defun elisp-complete--libraries ()
+  "Return a list of all libraries available in this Emacs instance."
+  (interactive)
+  ;; Loosely based on `counsel-library-candidates'.
+  (let ((seen (make-hash-table :test #'equal))
+        res)
+    (dolist (dir load-path)
+      (when (file-directory-p dir)
+        (dolist (filename (f-files dir))
+          ;; Convert /foo/bar/baz.el to baz.el.
+          (setq filename (f-filename filename))
+
+          (when (or (s-ends-with-p ".el" filename)
+                    (s-ends-with-p ".el.gz" filename))
+            (let ((lib-name (s-chop-suffixes '(".el" ".el.gz") filename))
+                  (enclosing-dirname (f-filename dir)))
+              (unless
+                  (or
+                   (s-ends-with-p "-autoloads" lib-name)
+                   (gethash lib-name seen)))
+              (push lib-name res)
+              (puthash lib-name t seen))))))
+    (-sort #'string< res)))
 
 (defun elisp-complete (command &optional arg &rest ignored)
   (interactive (list 'interactive))
