@@ -290,7 +290,7 @@ abbreviated, for example w-t-b for with-temp-buffer."
         (namespace (elisp-def--namespace-at-point)))
     (cond
      ((eq sexp-sym 'require)
-      (elisp-complete--library-cands))
+      (elisp-complete--library-cands prefix))
      ((eq namespace 'function)
       (elisp-complete-cands prefix :vars nil))
      ((memq namespace '(variable bound))
@@ -312,7 +312,7 @@ abbreviated, for example w-t-b for with-temp-buffer."
        (car (s-split-up-to (rx ".") docstring 1))
        "."))))
 
-(defun elisp-complete--libraries ()
+(defun elisp-complete--libraries (prefix)
   "Return a list of all libraries available in this Emacs instance."
   (interactive)
   ;; Loosely based on `counsel-library-candidates'.
@@ -324,25 +324,26 @@ abbreviated, for example w-t-b for with-temp-buffer."
           ;; Convert /foo/bar/baz.el to baz.el.
           (setq filename (f-filename filename))
 
-          (when (or (s-ends-with-p ".el" filename)
-                    (s-ends-with-p ".el.gz" filename))
-            (let ((lib-name (s-chop-suffixes '(".el" ".el.gz") filename))
-                  (enclosing-dirname (f-filename dir)))
-              (unless
-                  (or
-                   (s-ends-with-p "-autoloads" lib-name)
-                   (s-ends-with-p "-pkg" lib-name)
-                   (gethash lib-name seen))
-                (push lib-name res)
-                (puthash lib-name t seen)))))))
+          (let ((lib-name (s-chop-suffixes '(".el" ".el.gz") filename))
+                (enclosing-dirname (f-filename dir)))
+            (when
+                (and
+                 (or (s-ends-with-p ".el" filename)
+                     (s-ends-with-p ".el.gz" filename))
+                 (s-starts-with-p prefix lib-name)
+                 (not (s-ends-with-p "-autoloads" lib-name))
+                 (not (s-ends-with-p "-pkg" lib-name))
+                 (not (gethash lib-name seen)))
+              (push lib-name res)
+              (puthash lib-name t seen))))))
     (-sort #'string< res)))
 
-(defun elisp-complete--library-cands ()
+(defun elisp-complete--library-cands (prefix)
   (--map
    (elisp-complete--annotate
     (format "'%s" it)
     'library)
-   (elisp-complete--libraries)))
+   (elisp-complete--libraries prefix)))
 
 (defun elisp-complete (command &optional arg &rest ignored)
   (interactive (list 'interactive))
