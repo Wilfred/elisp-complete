@@ -54,8 +54,6 @@
 ;;
 ;; Offer bound variables inside let/condition-case.
 ;;
-;; (require ...) and (provide ...) should be trivially completable.
-;;
 ;; define-key and global-set-key: offer keymaps and interactive
 ;; commands.
 ;;
@@ -294,6 +292,13 @@ abbreviated, for example w-t-b for with-temp-buffer."
       '("&optional" "&rest"))
      ((eq sexp-sym 'require)
       (elisp-complete--library-cands prefix))
+     ((eq sexp-sym 'provide)
+      (let ((filename (buffer-file-name)))
+        (when filename
+          (list
+           (format "'%s"
+                   (s-chop-suffix ".el"
+                                  (f-filename filename)))))))
      ((eq namespace 'function)
       (elisp-complete-cands prefix :vars nil))
      ((memq namespace '(variable bound))

@@ -4,6 +4,6 @@ A smart contextual completion package for writing Emacs Lisp.
 
 ## Features
 
-Completion of library names inside `(require)` forms.
+Completion of library names inside `(require)` and `(provide)` forms.
 
 Complete `&optional` etc in argument lists.
