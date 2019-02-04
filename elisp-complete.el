@@ -52,8 +52,6 @@
 ;;
 ;; Consider expanding macros to work out what's bound.
 ;;
-;; Offer &rest and &optional in parameter lists.
-;;
 ;; Offer bound variables inside let/condition-case.
 ;;
 ;; (require ...) and (provide ...) should be trivially completable.
@@ -289,6 +287,11 @@ abbreviated, for example w-t-b for with-temp-buffer."
   (let ((sexp-sym (elisp-complete--enclosing-sexp-sym))
         (namespace (elisp-def--namespace-at-point)))
     (cond
+     ((s-starts-with-p "&" prefix)
+      ;; TODO: When in cl-defun or defun*, complete more parameter options.
+      ;; TODO: check whether we're in a parameter list.
+      ;; TODO: don't offer &optional after &rest.
+      '("&optional" "&rest"))
      ((eq sexp-sym 'require)
       (elisp-complete--library-cands prefix))
      ((eq namespace 'function)
