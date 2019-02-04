@@ -49,7 +49,7 @@
 ;;
 ;; Offer sensible completion inside (declare ...) forms and
 ;; (interactive ...) forms.
-;; 
+;;
 ;; Consider expanding macros to work out what's bound.
 ;;
 ;; Offer &rest and &optional in parameter lists.
@@ -77,6 +77,9 @@
 ;;
 ;; Don't offer completion for the first argument of var-val pairs in
 ;; `let', as they're usually new vars.
+;;
+;; Don't offer completion when defining things with defun, defvar,
+;; (although perhaps complete the package prefix).
 ;;
 ;; Offer completion of FOO in a docstring when `foo' is an argument to
 ;; a function.
