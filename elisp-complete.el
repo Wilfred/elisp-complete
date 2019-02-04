@@ -273,12 +273,24 @@ abbreviated, for example w-t-b for with-temp-buffer."
          'defvar)))
       global-syms))))
 
+(defun elisp-complete--enclosing-sexp-sym ()
+  "Return the first symbol of the innermost enclosing sexp."
+  (let* ((ppss (syntax-ppss))
+         (sexp-start (nth 1 ppss)))
+    (when sexp-start
+      (save-excursion
+        (goto-char sexp-start)
+        (car-safe (read (current-buffer)))))))
+
 (defun elisp-complete--candidates (prefix)
   ;; TODO: this isn't a great fit, because
   ;; `elisp-def--namespace-at-point' distinguishes bound vars from
   ;; global vars. We don't care here and it's needless work.
-  (let ((namespace (elisp-def--namespace-at-point)))
+  (let ((sexp-sym (elisp-complete--enclosing-sexp-sym))
+        (namespace (elisp-def--namespace-at-point)))
     (cond
+     ((eq sexp-sym 'require)
+      (elisp-complete--library-cands))
      ((eq namespace 'function)
       (elisp-complete-cands prefix :vars nil))
      ((memq namespace '(variable bound))
@@ -319,10 +331,18 @@ abbreviated, for example w-t-b for with-temp-buffer."
               (unless
                   (or
                    (s-ends-with-p "-autoloads" lib-name)
-                   (gethash lib-name seen)))
-              (push lib-name res)
-              (puthash lib-name t seen))))))
+                   (s-ends-with-p "-pkg" lib-name)
+                   (gethash lib-name seen))
+                (push lib-name res)
+                (puthash lib-name t seen)))))))
     (-sort #'string< res)))
+
+(defun elisp-complete--library-cands ()
+  (--map
+   (elisp-complete--annotate
+    (format "'%s" it)
+    'library)
+   (elisp-complete--libraries)))
 
 (defun elisp-complete (command &optional arg &rest ignored)
   (interactive (list 'interactive))
