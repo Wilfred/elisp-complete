@@ -8,6 +8,8 @@ Completion of library names inside `(require)` and `(provide)` forms.
 
 Complete `&optional` etc in argument lists.
 
+Auto insert a space after functions needing arguments.
+
 ## Demo
 
 ```

@@ -35,9 +35,6 @@
 ;; Could complete group value, simple type values, and keys to
 ;; defcustom.
 
-;; Auto insert space when completing (foo ) if foo takes multiple
-;; args.
-;;
 ;; Completion inside emacs style `backticks' inside docstrings and
 ;; comments.
 ;;
@@ -361,6 +358,13 @@ abbreviated, for example w-t-b for with-temp-buffer."
     (`candidates (elisp-complete--candidates arg))
     (`meta (elisp-complete--docstring (intern arg)))
     (`annotation (elisp-complete--format-annotation arg))
+    ;; TODO: Support macros and ambiguous vars/funcs based on current
+    ;; position.
+    ;; TODO: Only insert a space after functions that take 1+
+    ;; arguments.
+    (`post-completion
+     (when (eq (get-text-property 0 'description arg) 'defun)
+       (insert " ")))
     (`sorted t)))
 
 (provide 'elisp-complete)
