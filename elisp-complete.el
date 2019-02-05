@@ -360,7 +360,8 @@ abbreviated, for example w-t-b for with-temp-buffer."
     (`prefix (company-grab-symbol))
     (`candidates (elisp-complete--candidates arg))
     (`meta (elisp-complete--docstring (intern arg)))
-    (`annotation (elisp-complete--format-annotation arg))))
+    (`annotation (elisp-complete--format-annotation arg))
+    (`sorted t)))
 
 (provide 'elisp-complete)
 ;;; elisp-complete.el ends here
